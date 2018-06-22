@@ -5,75 +5,84 @@
 
 require 'unirest.rb'
 
-while true
+class Dictionary
+  def initialize(input_options)
+    @word = input_options[:word]
+  end
 
+  def get_top_example
+    top_example_response = Unirest.get("https://api.wordnik.com/v4/word.json/#{@word}/topExample?useCanonical=false&api_key=ac6099e63826b8650f05e22c4cc08baa2f21668e3f16176fd")
+    top_example_response.body
+  end
+
+  def get_definitions
+    definition_response = Unirest.get("https://api.wordnik.com/v4/word.json/#{@word}/definitions?limit=200&includeRelated=false&useCanonical=false&includeTags=false&api_key=ac6099e63826b8650f05e22c4cc08baa2f21668e3f16176fd")
+    definition_response.body
+  end
+
+
+  def get_pronunciations
+    pronunciation_response = Unirest.get("https://api.wordnik.com/v4/word.json/#{@word}/pronunciations?useCanonical=false&limit=50&api_key=ac6099e63826b8650f05e22c4cc08baa2f21668e3f16176fd")
+    pronunciation_response.body
+  end
+
+  def print_pronunciations
+    the_definitions = get_pronunciations
+    the_definitions.each_with_index do |pronuciation, i|
+      current_pronunciation = pronuciation['raw']
+      puts "#{i + 1}. #{current_pronunciation}"
+    end
+  end
+
+  def print_definitions
+    the_definitions = get_definitions
+    the_definitions.each_with_index do |definition, i|
+      current_definition = definition['text']
+      puts "#{i + 1}. #{current_definition}"
+    end
+  end
+
+  def print_top_example
+    puts get_top_example['text']
+  end
+
+  # this does a lot, probably should have called it 'print_definitions_pronunciations_and_top_example'
+  def print_info
+    if get_definitions[0] == nil
+      puts "Invalid word"
+    else
+      # output for terminal, uses dashes for cleaner screen
+      puts "-" * 20
+      puts "You entered #{@word}."
+      `say #{@word}`
+      puts "-" * 20
+      puts "We found the following definitions:"
+      print_definitions
+      puts "-" * 20
+      puts "The best example usage is:"
+      print_top_example
+      puts "-" * 20
+      puts "We found the following pronunciations:"
+      print_pronunciations
+      puts "-" * 20
+    end
+  end
+end
+
+while true
   # get user input, downcases it to avoid errors
   puts "Enter a word to search for.  Type in q to quit."
   word = gets.downcase.chomp
-  
   # creates an option to quit the program so it is not endless
   if word == "q"
     system "clear"
     puts "Goodbye!!!!"
     break
   end
-  
   #clears the screen here
   system "clear"
-
   # gets JSON data
-  definition_response = Unirest.get("https://api.wordnik.com/v4/word.json/#{word}/definitions?limit=200&includeRelated=false&useCanonical=false&includeTags=false&api_key=apikey")
-  top_example_response = Unirest.get"https://api.wordnik.com/v4/word.json/#{word}/topExample?useCanonical=false&api_key=apikey"
-  all_pronunciations = Unirest.get"https://api.wordnik.com/v4/word.json/#{word}/pronunciations?useCanonical=false&limit=50&api_key=apikey"
-
+  dictionary = Dictionary.new(word: word)
+  dictionary.print_info
   #check for nonsensical words
-  if definition_response.body[0] == nil
-    puts "Invalid word"
-    next
-  end
-
-  # Below were a few JSON tests
-  #----------------------------
-    # puts JSON.pretty_generate(definition_response.body)
-    # puts JSON.pretty_generate(top_example_response.body)
-    # puts JSON.pretty_generate(all_pronunciations.body)
-
-  # method to print definitions from JSON, didn't need to be a method I suppose.  I wanted to separate all variables and methods from screen output was my thought process.
-  def definitions(input)
-    list = 1
-    input.body.each do |definition|
-      current_definition = definition['text']
-      puts "#{list}. #{current_definition}"
-      list += 1
-    end
-  end
-
-  # gets best example from JSON
-  top_example = top_example_response.body['text']
-
-  # method to pring pronunciations from JSON, didn't need a method here either but I felt like using a method
-  def pronunciations(input)
-    list = 1
-    input.body.each do |pronuciation|
-      current_pronunciation = pronuciation['raw']
-      puts "#{list}. #{current_pronunciation}"
-      list += 1
-    end
-  end
-
-  # output for terminal, uses dashes for cleaner screen
-  puts "-" * 20
-  puts "You entered #{word}."
-  `say #{word}`
-  puts "-" * 20
-  puts "We found the following definitions:"
-  definitions(definition_response)
-  puts "-" * 20
-  puts "The best example usage is:"
-  puts top_example
-  puts "-" * 20
-  puts "We found the following pronunciations:"
-  pronunciations(all_pronunciations)
-  puts "-" * 20
-
 end
